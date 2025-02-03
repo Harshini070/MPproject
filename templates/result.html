@@ -65,16 +65,20 @@
 <body>
     <div class="result-container">
         <h1>Solution</h1>
+
         {% if error %}
             <p class="error">⚠ Error: {{ error }}</p>
         {% elif status %}
-            
             {% if optimal_value is not None %}
                 <p><strong>Optimal Value (Z):</strong> {{ optimal_value }}</p>
-                <p><strong>x1:</strong> {{ x1 }}</p>
-                <p><strong>x2:</strong> {{ x2 }}</p>
+                
+                <!-- Loop through all decision variables dynamically -->
+                {% for key, value in decision_variables.items %}
+                    <p><strong>{{ key }}:</strong> {{ value }}</p>
+                {% endfor %}
             {% endif %}
         {% endif %}
+
         <br>
         <a href="{% url 'home' %}" class="home-button">🏠 Go to Home</a>
     </div>
