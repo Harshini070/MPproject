@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Linear Programming Solver</title>
     <style>
-        /* General Styles */
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #1e3c72, #2a5298);
@@ -19,7 +18,6 @@
             height: 100vh;
         }
 
-        /* Form Container */
         .form-container {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
@@ -27,17 +25,9 @@
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             width: 50%;
-            max-width: 500px;
-            animation: fadeIn 1s ease-in-out;
+            max-width: 600px;
         }
 
-        /* Fade-in Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Input Fields */
         input, select {
             width: 100%;
             padding: 10px;
@@ -48,12 +38,6 @@
             box-sizing: border-box;
         }
 
-        input:focus, select:focus {
-            border-color: #ff9800;
-            outline: none;
-        }
-
-        /* Solve Button */
         .solve-button {
             background-color: #ff9800;
             color: white;
@@ -71,118 +55,99 @@
             background-color: #e68900;
             transform: scale(1.05);
         }
-
-        /* Error Message */
-        .error {
-            color: #ff4d4d;
-            font-weight: bold;
-        }
-
-        /* Add/Remove Constraints */
-        .add-remove-btns {
-            margin-top: 10px;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .add-btn, .remove-btn {
-            background-color: #ff9800;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
-            font-size: 16px;
-        }
-
-        .add-btn:hover, .remove-btn:hover {
-            background-color: #e68900;
-        }
-
-        /* Constraint Block Styling */
-        .constraint {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .constraint input, .constraint select {
-            width: calc(25% - 10px);
-            padding: 12px;
-        }
-
-        /* Responsive Constraints */
-        @media screen and (max-width: 768px) {
-            .constraint {
-                flex-direction: column;
-            }
-            .constraint input, .constraint select {
-                width: 100%;
-            }
-            .add-remove-btns {
-                flex-direction: column;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="form-container">
         <h1>Linear Programming Solver</h1>
-        <p><strong>User:</strong> {{ name }}</p>
-
+        
         <form method="POST" action="{% url 'solve_lp' %}" onsubmit="return validateForm()">
             {% csrf_token %}
-            
-            <h3>Objective Function</h3>
-            <select name="optimization" required>
-                <option value="maximize">Maximize</option>
-                <option value="minimize">Minimize</option>
+
+            <h3>Select Method:</h3>
+            <select id="method" name="method" onchange="updateForm()" required>
+                <option value="graphical">Graphical</option>
+                <option value="simplex">Simplex</option>
+                <option value="transportation">Transportation</option>
             </select>
 
-            <h3>Objective Function: Z = c1*x1 + c2*x2</h3>
-            <input type="text" id="c1" name="c1" placeholder="Enter c1" required>
-            <input type="text" id="c2" name="c2" placeholder="Enter c2" required>
+            <div id="simplex-section" style="display: none;">
+                <h3>Number of Decision Variables:</h3>
+                <input type="number" id="num-variables" name="num_variables" min="2" value="2" onchange="updateVariables()">
+            </div>
 
-            <h3>Constraints:</h3>
-            <div id="constraints">
-                <div class="constraint">
-                    <input type="text" name="a11" placeholder="a11 (x1 coefficient)" required>
-                    <input type="text" name="a12" placeholder="a12 (x2 coefficient)" required>
-                    <select name="operator1">
-                        <option value="<=">≤</option>
-                        <option value=">=">≥</option>
-                        <option value="=">=</option>
-                    </select>
-                    <input type="text" name="b1" placeholder="b1 (RHS)" required>
+            <div id="objective-function">
+                <h3>Objective Function</h3>
+                <select name="optimization" required>
+                    <option value="maximize">Maximize</option>
+                    <option value="minimize">Minimize</option>
+                </select>
+
+                <h3>Objective Function: Z =</h3>
+                <div id="objective-inputs">
+                    <input type="text" name="c1" placeholder="Enter c1" required>
+                    <input type="text" name="c2" placeholder="Enter c2" required>
                 </div>
             </div>
 
-            <div class="add-remove-btns">
-                <button type="button" class="add-btn" onclick="addConstraint()">Add Constraint</button>
-                <button type="button" class="remove-btn" onclick="removeConstraint()">Remove Constraint</button>
+            <div id="constraints-section">
+                <h3>Constraints:</h3>
+                <div id="constraints">
+                    <div class="constraint">
+                        <div class="constraint-inputs">
+                            <input type="text" name="a11" placeholder="a11 (x1 coefficient)" required>
+                            <input type="text" name="a12" placeholder="a12 (x2 coefficient)" required>
+                        </div>
+                        <select name="operator1">
+                            <option value="<=">≤</option>
+                            <option value=">=">≥</option>
+                            <option value="=">=</option>
+                        </select>
+                        <input type="text" name="b1" placeholder="b1 (RHS)" required>
+                    </div>
+                </div>
+
+                <button type="button" onclick="addConstraint()">Add Constraint</button>
+                <button type="button" onclick="removeConstraint()">Remove Constraint</button>
             </div>
-
-            <p id="error-message" class="error"></p>
-
+            
             <button type="submit" class="solve-button">Solve</button>
         </form>
     </div>
 
     <script>
-        function validateForm() {
-            let inputs = document.querySelectorAll("input[type='text']");
-            let errorMessage = document.getElementById("error-message");
+        function updateForm() {
+            let method = document.getElementById("method").value;
+            let simplexSection = document.getElementById("simplex-section");
 
-            for (let input of inputs) {
-                if (isNaN(input.value) || input.value.trim() === "") {
-                    errorMessage.innerText = "⚠ Please enter valid numerical values!";
-                    return false;
+            if (method === "simplex") {
+                simplexSection.style.display = "block";
+                updateVariables(); // Ensure variables update when switching
+            } else {
+                simplexSection.style.display = "none";
+            }
+        }
+
+        function updateVariables() {
+            let numVars = document.getElementById("num-variables").value;
+            let objInputs = document.getElementById("objective-inputs");
+            objInputs.innerHTML = "";
+
+            for (let i = 1; i <= numVars; i++) {
+                objInputs.innerHTML += `<input type="text" name="c${i}" placeholder="Enter c${i}" required>`;
+            }
+
+            // Update constraints dynamically
+            let constraintsDiv = document.getElementById("constraints");
+            let constraints = constraintsDiv.getElementsByClassName("constraint");
+
+            for (let i = 0; i < constraints.length; i++) {
+                let inputsDiv = constraints[i].getElementsByClassName("constraint-inputs")[0];
+                inputsDiv.innerHTML = "";
+                for (let j = 1; j <= numVars; j++) {
+                    inputsDiv.innerHTML += `<input type="text" name="a${i + 1}${j}" placeholder="a${i + 1}${j} (x${j} coefficient)" required>`;
                 }
             }
-            return true;
         }
 
         function addConstraint() {
@@ -192,8 +157,11 @@
             const newConstraint = document.createElement('div');
             newConstraint.classList.add('constraint');
             newConstraint.innerHTML = `
-                <input type="text" name="a${numConstraints}1" placeholder="a${numConstraints}1 (x1 coefficient)" required>
-                <input type="text" name="a${numConstraints}2" placeholder="a${numConstraints}2 (x2 coefficient)" required>
+                <div class="constraint-inputs">
+                    ${Array.from({ length: document.getElementById("num-variables").value }, (_, i) => 
+                        `<input type="text" name="a${numConstraints}${i + 1}" placeholder="a${numConstraints}${i + 1} (x${i + 1} coefficient)" required>`
+                    ).join('')}
+                </div>
                 <select name="operator${numConstraints}">
                     <option value="<=">≤</option>
                     <option value=">=">≥</option>
