@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Programming Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            text-align: center;
+            padding: 50px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            width: 50%;
+            max-width: 600px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .solve-button {
+            background-color: #ff9800;
+            color: white;
+            font-size: 18px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .solve-button:hover {
+            background-color: #e68900;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Linear Programming Solver</h1>
+        
+        <form method="POST" action="{% url 'solve_lp' %}" onsubmit="return validateForm()">
+            {% csrf_token %}
+
+            <h3>Select Method:</h3>
+            <select id="method" name="method" onchange="updateForm()" required>
+                <option value="graphical">Graphical</option>
+                <option value="simplex">Simplex</option>
+                <option value="transportation">Transportation</option>
+            </select>
+
+            <div id="transportation-section" style="display: none;">
+                <h3>Number of Sources:</h3>
+                <input type="number" id="num-sources" name="num_sources" min="2" value="3" onchange="updateTransportationGrid()">
+                
+                <h3>Number of Destinations:</h3>
+                <input type="number" id="num-destinations" name="num_destinations" min="2" value="3" onchange="updateTransportationGrid()">
+            
+                <h3>Cost Matrix (C<sub>ij</sub>)</h3>
+                <div id="transportation-grid"></div>
+            </div>
+            
+
+            <div id="simplex-section" style="display: none;">
+                <h3>Number of Decision Variables:</h3>
+                <input type="number" id="num-variables" name="num_variables" min="2" value="2" onchange="updateVariables()">
+            </div>
+
+            <div id="objective-function">
+                <h3>Objective Function</h3>
+                <select name="optimization" required>
+                    <option value="maximize">Maximize</option>
+                    <option value="minimize">Minimize</option>
+                </select>
+
+                <h3>Objective Function: Z =</h3>
+                <div id="objective-inputs">
+                    <input type="text" name="c1" placeholder="Enter c1" required>
+                    <input type="text" name="c2" placeholder="Enter c2" required>
+                </div>
+            </div>
+
+            <div id="constraints-section">
+                <h3>Constraints:</h3>
+                <div id="constraints">
+                    <div class="constraint">
+                        <div class="constraint-inputs">
+                            <input type="text" name="a11" placeholder="a11 (x1 coefficient)" required>
+                            <input type="text" name="a12" placeholder="a12 (x2 coefficient)" required>
+                        </div>
+                        <select name="operator1">
+                            <option value="<=">≤</option>
+                            <option value=">=">≥</option>
+                            <option value="=">=</option>
+                        </select>
+                        <input type="text" name="b1" placeholder="b1 (RHS)" required>
+                    </div>
+                </div>
+
+                <button type="button" onclick="addConstraint()">Add Constraint</button>
+                <button type="button" onclick="removeConstraint()">Remove Constraint</button>
+            </div>
+            
+            <button type="submit" class="solve-button">Solve</button>
+        </form>
+    </div>
+
+    <script>
+        function updateForm() {
+            let method = document.getElementById("method").value;
+            let simplexSection = document.getElementById("simplex-section");
+            let transportationSection = document.getElementById("transportation-section");
+            let objectiveFunction = document.getElementById("objective-function");
+            let constraintsSection = document.getElementById("constraints-section");
+
+            document.getElementById("simplex-section").style.display = method === "simplex" ? "block" : "none";
+            document.getElementById("transportation-section").style.display = method === "transportation" ? "block" : "none";
+
+            if (method === "transportation") {
+                transportationSection.style.display = "block";
+                simplexSection.style.display = "none";
+                objectiveFunction.style.display = "none";
+                constraintsSection.style.display = "none";
+                updateTransportationGrid(); // Update grid dynamically
+            } else if (method === "simplex" || method === "graphical") {
+                simplexSection.style.display = "block";
+                objectiveFunction.style.display = "block";
+                constraintsSection.style.display = "block";
+                transportationSection.style.display = "none";
+                if (method === "simplex") {
+                simplexSection.style.display = "block";
+                updateVariables(); // Ensure variables update when switching
+                }
+                else {
+                    simplexSection.style.display = "none";}
+            }
+
+        }
+
+        function updateVariables() {
+            let numVars = document.getElementById("num-variables").value;
+            let objInputs = document.getElementById("objective-inputs");
+            objInputs.innerHTML = "";
+
+            for (let i = 1; i <= numVars; i++) {
+                objInputs.innerHTML += `<input type="text" name="c${i}" placeholder="Enter c${i}" required>`;
+            }
+
+            // Update constraints dynamically
+            let constraintsDiv = document.getElementById("constraints");
+            let constraints = constraintsDiv.getElementsByClassName("constraint");
+
+            for (let i = 0; i < constraints.length; i++) {
+                let inputsDiv = constraints[i].getElementsByClassName("constraint-inputs")[0];
+                inputsDiv.innerHTML = "";
+                for (let j = 1; j <= numVars; j++) {
+                    inputsDiv.innerHTML += `<input type="text" name="a${i + 1}${j}" placeholder="a${i + 1}${j} (x${j} coefficient)" required>`;
+                }
+            }
+        }
+
+        function addConstraint() {
+            const constraintsDiv = document.getElementById('constraints');
+            const numConstraints = constraintsDiv.children.length + 1;
+
+            const newConstraint = document.createElement('div');
+            newConstraint.classList.add('constraint');
+            newConstraint.innerHTML = `
+                <div class="constraint-inputs">
+                    ${Array.from({ length: document.getElementById("num-variables").value }, (_, i) => 
+                        `<input type="text" name="a${numConstraints}${i + 1}" placeholder="a${numConstraints}${i + 1} (x${i + 1} coefficient)" required>`
+                    ).join('')}
+                </div>
+                <select name="operator${numConstraints}">
+                    <option value="<=">≤</option>
+                    <option value=">=">≥</option>
+                    <option value="=">=</option>
+                </select>
+                <input type="text" name="b${numConstraints}" placeholder="b${numConstraints} (RHS)" required>
+            `;
+            constraintsDiv.appendChild(newConstraint);
+        }
+
+        function removeConstraint() {
+            const constraintsDiv = document.getElementById('constraints');
+            if (constraintsDiv.children.length > 1) {
+                constraintsDiv.removeChild(constraintsDiv.lastElementChild);
+            }
+        }
+
+
+function updateTransportationGrid() {
+    let sources = document.getElementById("num-sources").value;
+    let destinations = document.getElementById("num-destinations").value;
+    let grid = document.getElementById("transportation-grid");
+
+    let html = "<table border='1'><tr><th></th>";
+
+    // Column headers (Destinations)
+    for (let j = 1; j <= destinations; j++) {
+        html += `<th>D${j}</th>`;
+    }
+    html += "<th>Supply</th></tr>";
+
+    // Matrix Input (Cost + Supply)
+    for (let i = 1; i <= sources; i++) {
+        html += `<tr><th>O${i}</th>`;
+        for (let j = 1; j <= destinations; j++) {
+            html += `<td><input type="text" name="c_${i}_${j}" size="5" required></td>`;
+        }
+        html += `<td><input type="text" name="s${i}" required></td></tr>`;
+    }
+
+    // Demand Row
+    html += "<tr><th>Demand</th>";
+    for (let j = 1; j <= destinations; j++) {
+        html += `<td><input type="text" name="d${j}" required></td>`;
+    }
+    html += "<td></td></tr></table>";
+
+    grid.innerHTML = html;
+}
+
+    </script>
+</body>
+</html>

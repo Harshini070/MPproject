@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LP Solution</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding: 50px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        /* Result Card */
+        .result-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            width: 50%;
+            max-width: 500px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Error Message */
+        .error {
+            color: #ff4d4d;
+            font-weight: bold;
+        }
+
+        /* Home Button */
+        .home-button {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #ff9800;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .home-button:hover {
+            background-color: #e68a00;
+            transform: scale(1.1);
+        }
+
+        /* Graph */
+        .graph-container {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        th, td {
+            border: 1px solid white;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <h1>Solution</h1>
+
+        {% if error %}
+            <p class="error">⚠ Error: {{ error }}</p>
+        {% else %}
+            
+            <!-- ✅ Display Optimal Value -->
+            {% if optimal_value is not None %}
+                <p><strong>Optimal Value (Z):</strong> {{ optimal_value }}</p>
+            {% endif %}
+
+            <!-- ✅ Display Decision Variables for Simplex/Graphical -->
+            {% if decision_variables %}
+                <h3>Decision Variables:</h3>
+                {% for key, value in decision_variables.items %}
+                    <p><strong>{{ key }}:</strong> {{ value }}</p>
+                {% endfor %}
+            {% endif %}
+
+            <!-- ✅ Graphical Method Result -->
+            {% if is_graphical %}
+                <div class="graph-container">
+                    <h2>Graphical Method Solution</h2>
+                    <img src="{{ graph_url }}" alt="Graphical Solution" style="width:100%; border-radius: 10px;">
+                </div>
+            {% endif %}
+
+            <!-- ✅ Transportation Method Result -->
+            {% if is_transportation %}
+                <h2>Transportation Method Solution</h2>
+                
+                <p><strong>Optimal Transportation Cost:</strong> {{ optimal_cost }}</p>
+
+                <h3>Allocation Matrix:</h3>
+                <table>
+                    <tr>
+                        <th></th>
+                        {% for j in range(num_destinations|default:0) %}
+                            <th>D{{ j+1 }}</th>
+                        {% endfor %}
+                    </tr>
+
+                    {% for i in range(num_sources) %}
+                        <tr>
+                            <th>O{{ i+1 }}</th>
+                            {% for j in range(num_destinations) %}
+                                <td>{{ allocation[i][j] }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+
+        {% endif %}
+
+        <br>
+        <a href="{% url 'home' %}" class="home-button">🏠 Go to Home</a>
+    </div>
+</body>
+</html>
